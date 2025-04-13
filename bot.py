@@ -2,23 +2,26 @@
 from telethon import TelegramClient, events, Button
 import aiosqlite
 import json
-import httpx # <--- Import httpx
+import httpx
 import asyncio
 import os
 
 # --- Configuration ---
-api_id = 18377832  # Your api_id
-api_hash = "ed8556c450c6d0fd68912423325dd09c"  # Your api_hash
-session_name = "my_ai_multi_model" # Changed session name slightly
-admin_id = 7094106651 # Your Admin ID
-json_file = 'users_started.json' # Renamed for clarity
+# ... (Configuration remains the same) ...
+api_id = 18377832
+api_hash = "ed8556c450c6d0fd68912423325dd09c"
+session_name = "my_ai_multi_model"
+admin_id = 7094106651
+json_file = 'users_started.json'
 
 # --- Bot State ---
+# ... (Bot state remains the same) ...
 client = TelegramClient(session_name, api_id, api_hash)
 bot_active = True
-user_states = {} # Stores {"user_id": {"model": "...", "language": "..."}}
+user_states = {}
 
 # --- Constants ---
+# ... (Constants remain the same) ...
 languages = [
     "Laravel", "Python", "Java", "JavaScript", "C#", "C++", "C",
     "Swift", "Golang", "Rust", "Kotlin", "TypeScript", "PhP"
@@ -31,15 +34,17 @@ ext_map = {
 }
 
 AI_MODELS = {
-    "gpt": "GPT (4)", # Identifier and display name
+    "gpt": "GPT (Binjie)",
     "gemini": "Gemini 2.0 Flash"
 }
 
 GPT_API_URL = "https://api.binjie.fun/api/generateStream"
 GEMINI_API_URL = "https://gem-ehsan.vercel.app/gemini/chat"
-GEMINI_MODEL_ID = "2" # As per your requirement
+GEMINI_MODEL_ID = "2"
 
-# --- JSON User Tracking (for /list_started) ---
+
+# --- JSON User Tracking ---
+# ... (load_started_users, save_started_users, add_started_user, get_started_users_list functions remain the same) ...
 def load_started_users():
     try:
         with open(json_file, 'r', encoding='utf-8') as file:
@@ -60,7 +65,9 @@ def add_started_user(user_id):
 def get_started_users_list():
     return load_started_users()
 
-# --- SQLite User Tracking (for /broadcast and general user addition) ---
+
+# --- SQLite User Tracking ---
+# ... (init_db, add_user_to_db functions remain the same) ...
 async def init_db():
     async with aiosqlite.connect("users.db") as db:
         await db.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY)")
@@ -76,21 +83,20 @@ async def add_user_to_db(user_id):
 
 
 # --- Event Handlers ---
+# ... (start, return_to_main_menu, choose_ai_model, handle_ai_model_selection, handle_language_selection remain the same) ...
 
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
     if not bot_active and event.sender_id != admin_id:
         return
-
     user_id = event.sender_id
-    await add_user_to_db(user_id) # Add to SQLite DB
-    add_started_user(user_id) # Add to JSON list
-    user_states.pop(user_id, None) # Clear any previous state
-
+    await add_user_to_db(user_id)
+    add_started_user(user_id)
+    user_states.pop(user_id, None)
     await event.respond(
         "**سلام، چطوری میتونم کمکت کنم؟**",
         buttons=[
-            [Button.inline("🧬 کد نویسی", b"select_ai")], # Changed callback data
+            [Button.inline("🧬 کد نویسی", b"select_ai")],
             [Button.inline("📚 راهنما", b"help")],
             [Button.url("🧑‍💻 ارتباط با توسعه دهنده", "https://t.me/n6xel")]
         ]
@@ -99,11 +105,11 @@ async def start(event):
 @client.on(events.CallbackQuery(data=b"main_menu"))
 async def return_to_main_menu(event):
     user_id = event.sender_id
-    user_states.pop(user_id, None) # Clear state when returning to main menu
+    user_states.pop(user_id, None)
     await event.edit(
         "**سلام، چطوری میتونم کمکت کنم؟**",
         buttons=[
-            [Button.inline("🧬 کد نویسی", b"select_ai")], # Changed callback data
+            [Button.inline("🧬 کد نویسی", b"select_ai")],
             [Button.inline("📚 راهنما", b"help")],
             [Button.url("🧑‍💻 ارتباط با توسعه دهنده", "https://t.me/n6xel")]
         ]
@@ -114,33 +120,23 @@ async def choose_ai_model(event):
     if not bot_active and event.sender_id != admin_id:
         await event.answer("ربات در حال حاضر غیرفعال است.", alert=True)
         return
-
     user_id = event.sender_id
-    user_states.pop(user_id, None) # Clear previous state if any
-
+    user_states.pop(user_id, None)
     ai_buttons = [
         Button.inline(name, f"model_{key}".encode('utf-8'))
         for key, name in AI_MODELS.items()
     ]
-
-    # Arrange buttons in rows of 2
     rows = []
     for i in range(0, len(ai_buttons), 2):
         rows.append(ai_buttons[i:i+2])
-
     rows.append([Button.inline("🔙 برگشت به منوی اصلی", b"main_menu")])
-
-    await event.edit(
-        "**لطفا مدل هوش مصنوعی را انتخاب کنید:**",
-        buttons=rows
-    )
+    await event.edit("**لطفا مدل هوش مصنوعی را انتخاب کنید:**", buttons=rows)
 
 @client.on(events.CallbackQuery(pattern=b'model_(.*)'))
 async def handle_ai_model_selection(event):
     if not bot_active and event.sender_id != admin_id:
         await event.answer("ربات در حال حاضر غیرفعال است.", alert=True)
         return
-
     user_id = event.sender_id
     try:
         model_key = event.pattern_match.group(1).decode('utf-8')
@@ -148,41 +144,25 @@ async def handle_ai_model_selection(event):
         print(f"Error decoding model key: {e}")
         await event.answer("خطا در پردازش انتخاب.", alert=True)
         return
-
-
     if model_key not in AI_MODELS:
         await event.answer("مدل نامعتبر است.", alert=True)
         return
-
-    # Initialize state for the user with the selected model
     user_states[user_id] = {"model": model_key}
-
-    # --- Now show language selection ---
-    lang_buttons = []
-    for lang in languages:
-        lang_buttons.append(Button.inline(lang, f"lang_{lang}".encode('utf-8'))) # Prefix callback data
-
-    # Arrange buttons in rows of 2
+    lang_buttons = [Button.inline(lang, f"lang_{lang}".encode('utf-8')) for lang in languages]
     rows = []
     for i in range(0, len(lang_buttons), 2):
         rows.append(lang_buttons[i:i+2])
-
-    # Add back button to AI selection
     rows.append([Button.inline("🔙 برگشت به انتخاب مدل", b"select_ai")])
-
     await event.edit(
-        f"**مدل انتخاب شده: {AI_MODELS[model_key]}**\n\n"
-        "**لطفاً زبان برنامه‌نویسی را انتخاب کنید:**",
+        f"**مدل انتخاب شده: {AI_MODELS[model_key]}**\n\n**لطفاً زبان برنامه‌نویسی را انتخاب کنید:**",
         buttons=rows
     )
-
 
 @client.on(events.CallbackQuery(pattern=b'lang_(.*)'))
 async def handle_language_selection(event):
     if not bot_active and event.sender_id != admin_id:
         await event.answer("ربات در حال حاضر غیرفعال است.", alert=True)
         return
-
     user_id = event.sender_id
     try:
         lang = event.pattern_match.group(1).decode('utf-8')
@@ -190,65 +170,68 @@ async def handle_language_selection(event):
         print(f"Error decoding language: {e}")
         await event.answer("خطا در پردازش زبان.", alert=True)
         return
-
-
     if lang not in languages:
         await event.answer("زبان نامعتبر است.", alert=True)
         return
-
-    # Check if model was already selected (should be)
     if user_id not in user_states or "model" not in user_states[user_id]:
         await event.edit("**خطا: ابتدا باید مدل هوش مصنوعی را انتخاب کنید.**", buttons=[Button.inline("انتخاب مدل", b"select_ai")])
         return
-
-    # Store selected language in user state
     user_states[user_id]["language"] = lang
     selected_model_key = user_states[user_id]["model"]
     selected_model_name = AI_MODELS.get(selected_model_key, "ناشناخته")
-
     await event.edit(
         f"**مدل: {selected_model_name}**\n"
         f"**زبان: {lang}**\n\n"
         "**سوالت رو بپرس تا کدشو بنویسم.**",
         buttons=[
-            Button.inline("🔙 برگشت به انتخاب زبان", f"model_{selected_model_key}".encode('utf-8')) # Back to language list for this model
+            Button.inline("🔙 برگشت به انتخاب زبان", f"model_{selected_model_key}".encode('utf-8'))
         ]
     )
 
 
+async def is_code_related(text, user_id):
+    check_prompt = f'Is the following message a valid request for generating programming code? Answer only with "yes" or "no".\n\n"{text}"'
+    try:
+        print(f"Checking relevance for user {user_id}: {text[:50]}...")
+        reply = await call_gpt_api(check_prompt, f"validator-{user_id}")
+        print(f"Relevance check reply: {reply}")
+        return "yes" in reply.lower()
+    except Exception as e:
+        print(f"Error during code relevance check: {e}")
+        return False
+
+
 @client.on(events.NewMessage)
 async def handle_message(event):
-    # Ignore commands and non-private messages for this handler
     if event.text.startswith('/') or not event.is_private:
-        # Keep this check, but allow admin commands through other handlers
-        # Check if it's an admin command and handle appropriately if needed, or let other handlers manage it
         if event.sender_id == admin_id and event.text.startswith('/'):
-             return # Let admin command handlers process
-        # For non-admin users, ignore commands here
+             return
         elif not event.text.startswith('/'):
-            pass # Continue processing potential coding requests
+            pass
         else:
-             return # Ignore commands from non-admins
-
+             return
 
     if not bot_active and event.sender_id != admin_id:
-        # Maybe send a message? Or just silently ignore.
-        # await event.respond("ربات در حال حاضر غیرفعال است.")
         return
 
     user_id = event.sender_id
     chat_id = event.chat_id
     user_input = event.text.strip()
 
-    # Check if user is in the process of asking for code
     if user_id in user_states and "model" in user_states[user_id] and "language" in user_states[user_id]:
         lang = user_states[user_id]["language"]
         model = user_states[user_id]["model"]
-        model_name = AI_MODELS.get(model, "AI") # Get display name
+        model_name = AI_MODELS.get(model, "AI")
 
-        # Adjusted prompt for potentially better results, especially for code generation
+        async with client.action(chat_id, "typing"):
+            is_valid = await is_code_related(user_input, user_id)
+
+        if not is_valid:
+            await event.respond("**متاسفم، به نظر نمی‌رسه این یک درخواست معتبر برای نوشتن کد باشه. لطفا درخواست مربوط به برنامه‌نویسی رو مطرح کن.**")
+            if user_id in user_states: del user_states[user_id]
+            return
+
         prompt = f"Please provide only the {lang} code for the following request, without any explanation before or after the code block:\n\n{user_input}"
-
         processing_msg = await event.respond(f"**در حال پردازش درخواست شما با {model_name} برای زبان {lang}... لطفاً صبر کنید.**")
 
         response = None
@@ -257,67 +240,111 @@ async def handle_message(event):
                 if model == "gemini":
                     response = await call_gemini_api(prompt, user_id)
                 elif model == "gpt":
-                    # Using a slightly different prompt structure might be better for GPT
                     gpt_prompt = f"{lang}: {user_input}. Only provide the code block as output."
                     response = await call_gpt_api(gpt_prompt, user_id)
                 else:
                     response = "خطا: مدل هوش مصنوعی انتخاب شده معتبر نیست."
-
             except Exception as e:
                 response = f"متاسفانه در تولید کد خطایی رخ داد: {e}"
-                print(f"Error during API call for user {user_id}: {e}") # Log the error
+                print(f"Error during API call for user {user_id}: {e}")
 
-        # --- Handle Response ---
         if response:
-            # Clean up potential markdown backticks if the API includes them
             response = response.strip().strip('`')
-            if response.startswith(lang.lower()): # Remove potential language prefix like "python\n"
+            if response.lower().startswith(lang.lower()):
                  response = response[len(lang):].strip()
 
             try:
-                if len(response) > 4000: # Telegram message limit is ~4096
+                # --- Button Definitions ---
+                back_to_lang_button = Button.inline(
+                    "🔙 بازگشت به زبان‌ها",
+                    f"model_{model}".encode('utf-8')
+                )
+                new_code_button = Button.inline(
+                    "🔄 کد جدید از همین زبان",
+                    f"newcode_{model}_{lang}".encode('utf-8') # Include model and lang
+                )
+
+                if len(response) > 4000:
                     ext = ext_map.get(lang, "txt")
                     filename = f"code_{user_id}_{lang.lower()}.{ext}"
                     try:
                         with open(filename, "w", encoding="utf-8") as f:
                             f.write(response)
+                        # Send file with buttons
                         await client.send_file(
                             event.chat_id,
                             filename,
                             caption=f"کد شما با **{model_name}** برای زبان **{lang}** آماده است.",
-                            reply_to=event.message.id # Reply to the user's request message
+                            reply_to=event.message.id,
+                            buttons=[[back_to_lang_button, new_code_button]] # Add buttons here too
                         )
-                        await processing_msg.delete() # Delete the "processing" message
+                        await processing_msg.delete()
                     finally:
                         if os.path.exists(filename):
-                            os.remove(filename) # Clean up the file
+                            os.remove(filename)
                 else:
-                    # Ensure response is not empty
                     if not response.strip():
-                        response = "**پاسخی دریافت نشد. لطفا دوباره امتحان کنید یا سوال خود را تغییر دهید.**"
-                        final_message = response # No code block if empty
+                        response_text = "**پاسخی دریافت نشد. لطفا دوباره امتحان کنید یا سوال خود را تغییر دهید.**"
+                        buttons_to_show = [[back_to_lang_button]] # Only show back button if no code
                     else:
-                        # Format as code block
-                        final_message = f"**پاسخ با {model_name} برای زبان {lang}:**\n```{lang.lower()}\n{response}\n```"
-
+                        response_text = f"**پاسخ با {model_name} برای زبان {lang}:**\n```{lang.lower()}\n{response}\n```"
+                        buttons_to_show = [[back_to_lang_button, new_code_button]] # Show both buttons
 
                     await processing_msg.edit(
-                        final_message,
-                        buttons=[
-                             Button.inline("🔙 برگشت به انتخاب زبان", f"model_{model}".encode('utf-8')) # Back to language list
-                        ],
-                         parse_mode='markdown' # Use markdown for code blocks
+                        response_text,
+                        buttons=buttons_to_show,
+                        parse_mode='markdown'
                     )
             except Exception as e:
                 await processing_msg.edit(f"خطا در نمایش پاسخ: {e}")
                 print(f"Error formatting/sending response for user {user_id}: {e}")
 
-        # Clear state after processing the request
+        # Clear state *after* processing and sending response
+        # State will be re-added if user clicks "New Code" button
         if user_id in user_states:
              del user_states[user_id]
 
-# --- Admin Commands ---
+# --- <<< NEW Callback Handler for "New Code" button >>> ---
+@client.on(events.CallbackQuery(pattern=b'newcode_(.*)_(.*)'))
+async def handle_new_code_request(event):
+    """Handles the 'New Code from Current Language' button press."""
+    if not bot_active and event.sender_id != admin_id:
+        await event.answer("ربات در حال حاضر غیرفعال است.", alert=True)
+        return
 
+    user_id = event.sender_id
+    try:
+        # Extract model and language from callback data
+        model_key = event.pattern_match.group(1).decode('utf-8')
+        lang = event.pattern_match.group(2).decode('utf-8')
+
+        # Validate extracted data
+        if model_key not in AI_MODELS or lang not in languages:
+            await event.answer("خطا: اطلاعات دکمه نامعتبر است.", alert=True)
+            return
+
+        # Re-establish user state
+        user_states[user_id] = {"model": model_key, "language": lang}
+        model_name = AI_MODELS.get(model_key, "AI")
+
+        # Edit the message to prompt for a new question
+        await event.edit(
+            f"**مدل: {model_name}**\n"
+            f"**زبان: {lang}**\n\n"
+            "✅ بسیار خب! **سوال جدیدت رو برای همین زبان بپرس.**",
+            buttons=[
+                 Button.inline("🔙 برگشت به انتخاب زبان", f"model_{model_key}".encode('utf-8'))
+                 ]
+        )
+        await event.answer(f"آماده دریافت سوال جدید برای زبان {lang}...") # Subtle confirmation
+
+    except Exception as e:
+        print(f"Error handling new code request button: {e}")
+        await event.answer("خطایی در پردازش درخواست رخ داد.", alert=True)
+
+
+# --- Admin Commands ---
+# ... (admin_panel, list_started_users_cmd, show_stats, turn_on, turn_off, show_help, broadcast functions remain the same) ...
 @client.on(events.NewMessage(pattern='/admin', from_users=admin_id))
 async def admin_panel(event):
     msg = """
@@ -358,19 +385,17 @@ async def list_started_users_cmd(event):
 
     user_list_md += f"\n**تعداد کل: {count} (خطا: {errors})**"
 
-    # Send in chunks if too long
     if len(user_list_md) > 4096:
         await event.respond("**لیست کاربران طولانی است. ارسال در چند بخش...**")
         parts = [user_list_md[i:i+4000] for i in range(0, len(user_list_md), 4000)]
         for part in parts:
-            await client.send_message(admin_id, part, parse_mode='markdown') # Ensure parsing
+            await client.send_message(admin_id, part, parse_mode='markdown')
     else:
-        await event.respond(user_list_md, parse_mode='markdown') # Ensure parsing
+        await event.respond(user_list_md, parse_mode='markdown')
 
 
 @client.on(events.NewMessage(pattern='/stats', from_users=admin_id))
 async def show_stats(event):
-     # Count from SQLite DB
     db_count = 0
     try:
         async with aiosqlite.connect("users.db", timeout=5) as db:
@@ -382,7 +407,6 @@ async def show_stats(event):
         await event.respond(f"خطا در شمارش کاربران دیتابیس: {e}")
         return
 
-    # Count from JSON file
     json_count = len(get_started_users_list())
 
     await event.respond(
@@ -408,28 +432,22 @@ async def turn_off(event):
 @client.on(events.CallbackQuery(data=b"help"))
 async def show_help(event):
     await event.answer()
-
     help_message = """
     **🌟 راهنمای استفاده از ربات 🌟**
 
-    برای استفاده از ربات، مراحل زیر را دنبال کنید:
+    1️⃣ **انتخاب مدل**: روی "کد نویسی" بزنید و مدل (GPT یا Gemini) را انتخاب کنید.
+    2️⃣ **انتخاب زبان**: زبان برنامه‌نویسی را انتخاب کنید.
+    3️⃣ **ارسال سوال**: درخواست کدنویسی خود را بنویسید (ربات چک می‌کند مرتبط باشد).
+    4️⃣ **دریافت کد**: ربات کد درخواستی را با مدل انتخابی تولید می‌کند.
+    5️⃣ **ادامه**: می‌توانید با دکمه "کد جدید از همین زبان" سوال دیگری بپرسید یا با "بازگشت به زبان‌ها" زبان را عوض کنید.
 
-    1️⃣ **انتخاب مدل**: روی دکمه "کد نویسی" بزنید و مدل هوش مصنوعی (مثل Gemini یا GPT) را انتخاب کنید.
-    2️⃣ **انتخاب زبان**: زبان برنامه‌نویسی مورد نظر خود را انتخاب کنید.
-    3️⃣ **ارسال سوال**: سوال یا درخواست کدنویسی خود را به زبان انتخابی بنویسید.
-    4️⃣ **دریافت کد**: ربات سعی می‌کند بهترین کد ممکن را با استفاده از مدل انتخابی برای شما بنویسد.
-
-    ⬅️ **بازگشت**: از دکمه‌های "برگشت" برای رفتن به مرحله قبل استفاده کنید.
-
-    ❗️ **توجه**: ربات برای پاسخ به درخواست‌های مرتبط با برنامه‌نویسی طراحی شده است.
-
-    💡 از این ربات لذت ببرید!
+    ⬅️ **بازگشت**: از دکمه‌های "برگشت" استفاده کنید.
+    ❗️ **توجه**: فقط درخواست‌های مربوط به برنامه‌نویسی پذیرفته می‌شوند.
     """
-
     await event.edit(
         help_message,
         buttons=[
-            [Button.inline("🏁 شروع کنید!", b"select_ai")], # Start with AI selection
+            [Button.inline("🏁 شروع کنید!", b"select_ai")],
             [Button.inline("🔙 برگشت به منوی اصلی", b"main_menu")]
         ]
     )
@@ -441,11 +459,10 @@ async def broadcast(event):
     count = 0
     errors = 0
     await event.respond(f"⏳ در حال شروع ارسال پیام همگانی برای کاربران دیتابیس...")
-
     try:
         async with aiosqlite.connect("users.db", timeout=10) as db:
             async with db.execute("SELECT user_id FROM users") as cursor:
-                rows = await cursor.fetchall() # Fetch all users at once
+                rows = await cursor.fetchall()
 
         total_users = len(rows)
         if total_users == 0:
@@ -453,7 +470,6 @@ async def broadcast(event):
              return
 
         status_message = await event.respond(f"ارسال به 0 از {total_users} کاربر...")
-
         for i, row in enumerate(rows):
             user_id = row[0]
             try:
@@ -462,91 +478,112 @@ async def broadcast(event):
             except Exception as e:
                 print(f"Failed to send broadcast to {user_id}: {e}")
                 errors += 1
-            # Update status periodically to avoid flooding Telegram
-            if (i + 1) % 25 == 0 or (i + 1) == total_users: # Update more frequently
+            if (i + 1) % 25 == 0 or (i + 1) == total_users:
                 await status_message.edit(f"ارسال به {i+1} از {total_users} کاربر... (موفق: {count}, خطا: {errors})")
-                await asyncio.sleep(1) # Small delay
-
+                await asyncio.sleep(1)
         await status_message.edit(f"✅ پیام همگانی برای **{count}** کاربر ارسال شد. **{errors}** خطا رخ داد.")
-
     except aiosqlite.Error as e:
         await event.respond(f"خطا در دسترسی به دیتابیس: {e}")
     except Exception as e:
          await event.respond(f"خطای ناشناخته در ارسال همگانی: {e}")
 
-# --- API Call Functions ---
 
+# --- API Call Functions ---
+# ... (call_gpt_api and call_gemini_api remain the same as the previous version with JSON parsing) ...
 async def call_gpt_api(query, user_id):
-    """Calls the Binjie (GPT-like) API."""
     headers = {
         "authority": "api.binjie.fun", "accept": "application/json, text/plain, */*",
         "accept-encoding": "gzip, deflate, br", "accept-language": "en-US,en;q=0.9",
         "origin": "https://chat18.aichatos.xyz", "referer": "https://chat18.aichatos.xyz/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36", # Updated UA
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
         "Content-Type": "application/json"
     }
     data = {
-        "prompt": query, "userId": f"telethon-{user_id}", # Make user ID more distinct
-        "network": True, "system": "", "withoutContext": True, # Maybe True is better?
+        "prompt": query, "userId": f"telethon-{user_id}",
+        "network": True, "system": "", "withoutContext": True,
         "stream": False
     }
     try:
-        async with httpx.AsyncClient(timeout=45.0) as http_client: # Increased timeout
+        async with httpx.AsyncClient(timeout=45.0) as http_client:
             res = await http_client.post(GPT_API_URL, headers=headers, json=data)
-            res.raise_for_status() # Raise exception for bad status codes (4xx or 5xx)
-            # Assuming the response is plain text
+            res.raise_for_status()
             return res.text.strip()
     except httpx.HTTPStatusError as e:
          print(f"GPT API HTTP Error: {e.response.status_code} - {e.response.text}")
-         # Provide a user-friendly error message
-         error_text = e.response.text[:100] # Show only the beginning of the error text
-         return f"خطا در ارتباط با سرویس GPT (HTTP {e.response.status_code}).\nپاسخ سرور: `{error_text}...`"
+         error_text = e.response.text[:100]
+         return f"خطا در ارتباط با سرویس GPT (HTTP {e.response.status_code}).\n`{error_text}...`"
     except httpx.RequestError as e:
         print(f"GPT API Request Error: {e}")
-        return f"خطا در شبکه هنگام تماس با سرویس GPT: {e}"
+        return f"خطا در شبکه هنگام تماس با سرویس GPT."
     except Exception as e:
         print(f"GPT API Generic Error: {e}")
-        return f"خطای ناشناخته در سرویس GPT: {e}"
-
+        return f"خطای ناشناخته در سرویس GPT."
 
 async def call_gemini_api(query, user_id):
-    """Calls the Vercel Gemini API."""
-    payload = {
-        "prompt": query,
-        "model": GEMINI_MODEL_ID
-    }
+    payload = { "prompt": query, "model": GEMINI_MODEL_ID }
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client: # Increased timeout
+        async with httpx.AsyncClient(timeout=45.0) as client:
             response = await client.post(GEMINI_API_URL, json=payload)
-            response.raise_for_status() # Check for HTTP errors
-            # Check content type or just assume text based on user info
-            # If it returns JSON like {"response": "...", ...}, adjust accordingly:
-            # try:
-            #     data = response.json()
-            #     return data.get("response", "پاسخ نامعتبر از Gemini دریافت شد.").strip()
-            # except json.JSONDecodeError:
-            #     return response.text.strip() # Fallback to text
-            return response.text.strip() # Assuming plain text response for now
+            response.raise_for_status()
+            try:
+                data = response.json()
+                result = data.get("result")
+                if result is not None and isinstance(result, str):
+                    return result.strip()
+                else:
+                    print(f"Gemini API unexpected JSON structure: {data}")
+                    return "خطا: ساختار پاسخ دریافت شده از Gemini نامعتبر است."
+            except json.JSONDecodeError:
+                print(f"Gemini API non-JSON response: {response.text}")
+                return f"خطا: پاسخ غیر JSON از Gemini دریافت شد:\n`{response.text[:100]}...`"
     except httpx.HTTPStatusError as e:
          print(f"Gemini API HTTP Error: {e.response.status_code} - {e.response.text}")
-         error_text = e.response.text[:100] # Show only the beginning of the error text
-         return f"خطا در ارتباط با سرویس Gemini (HTTP {e.response.status_code}).\nپاسخ سرور: `{error_text}...`"
+         error_text = e.response.text[:100]
+         return f"خطا در ارتباط با سرویس Gemini (HTTP {e.response.status_code}).\n`{error_text}...`"
     except httpx.RequestError as e:
         print(f"Gemini API Request Error: {e}")
-        return f"خطا در شبکه هنگام تماس با سرویس Gemini: {e}"
+        return f"خطا در شبکه هنگام تماس با سرویس Gemini."
     except Exception as e:
         print(f"Gemini API Generic Error: {e}")
-        return f"خطای ناشناخته در سرویس Gemini: {e}"
-
+        return f"خطای ناشناخته در سرویس Gemini."
 
 # --- Main Execution ---
+# ... (main function with BOT_TOKEN handling remains the same) ...
 async def main():
-    await init_db() # Initialize the database on startup
-    await client.start()
+    await init_db()
+    try:
+         BOT_TOKEN = os.environ.get("BOT_TOKEN")
+         if not BOT_TOKEN:
+              # Fallback: try reading from a file named .env
+              try:
+                  with open('.env', 'r') as f:
+                      for line in f:
+                          if line.startswith('BOT_TOKEN='):
+                              BOT_TOKEN = line.strip().split('=', 1)[1]
+                              break
+              except FileNotFoundError:
+                  pass # .env file doesn't exist, proceed to raise error or user login
+
+         if not BOT_TOKEN:
+              raise ValueError("BOT_TOKEN not found in environment variables or .env file.")
+
+         print("Logging in using Bot Token...")
+         await client.start(bot_token=BOT_TOKEN)
+
+    except ValueError as e:
+         print(f"Info: {e}")
+         print("Attempting user login instead (will ask for phone/code if needed)...")
+         await client.start() # Fallback to user login
+    except Exception as e:
+         print(f"An unexpected error occurred during login: {e}")
+         return
+
     print("ربات با قابلیت انتخاب مدل روشن شد...")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    # Ensure httpx is installed: pip install httpx
+    # Ensure libraries are installed: pip install httpx aiosqlite telethon python-dotenv
+    # For Bot login, set environment variable BOT_TOKEN='YOUR_TOKEN_HERE'
+    # Or create a file named .env in the same directory with the line: BOT_TOKEN=YOUR_TOKEN_HERE
+    # Consider adding python-dotenv: pip install python-dotenv (optional, helps with .env file)
     asyncio.run(main())
-
