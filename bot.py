@@ -14,7 +14,7 @@ load_dotenv()
 api_id = os.environ.get("API_ID", 18377832) # Use env var or default
 api_hash = os.environ.get("API_HASH", "ed8556c450c6d0fd68912423325dd09c") # Use env var or default
 session_name = "my_ai_multi_model"
-admin_id = int(os.environ.get("ADMIN_ID", 7094106651)) # Use env var or default, ensure integer
+admin_id = int(os.environ.get("ADMIN_ID", 6856915102)) # Use env var or default, ensure integer
 json_file = 'users_started.json'
 db_file = 'users.db'
 
